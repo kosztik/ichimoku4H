@@ -16,6 +16,8 @@ input int tenkan=9;
 input int kijun=26;
 input int senkou=52;
 
+datetime lastBarTime=0; // Utolsó futtatás ideje
+
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
@@ -28,7 +30,19 @@ int OnInit()
    SetIndexStyle(1, DRAW_LINE);
 
    IndicatorShortName("H4 Ichimoku Kumo on H1");
+   
+   // Induláskor teljes újraszámolás
+   lastBarTime=0;
    return(INIT_SUCCEEDED);
+  }
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+   // Timeframe váltás vagy MT4 leállítás esetén reset
+   lastBarTime=0;
   }
 
 //+------------------------------------------------------------------+
@@ -45,8 +59,17 @@ int OnCalculate(const int rates_total,
                 const long &volume[],
                 const int &spread[])
   {
+   // Ellenőrizzük, hogy új óra kezdődött-e
+   if(time[0] <= lastBarTime && prev_calculated > 0)
+      return(rates_total); // Ha nem új óra, kilépünk
+
+   lastBarTime = time[0]; // Frissítjük az utolsó futtatás idejét
+
    int i, limit = rates_total - prev_calculated;
-   if (limit > rates_total - 100) limit = rates_total - 100; // speed up
+   if(prev_calculated == 0) // MT4 indulás vagy timeframe váltás
+      limit = rates_total - 100; // Teljes újraszámolás
+   if(limit > rates_total - 100)
+      limit = rates_total - 100; // Sebesség optimalizálás
 
    for(i=0; i<limit; i++)
      {
